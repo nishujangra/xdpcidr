@@ -1,5 +1,7 @@
 // Developed by: Nishant ndjangra1027@gmail.com -- nishujangra.dev
 
+#include "maps/maps.c"
+#include "maps/struct.h"
 #include <bpf/bpf_helpers.h>
 #include <linux/bpf.h>
 #include <linux/if_ether.h>
@@ -33,6 +35,15 @@ int xdp_cidr(struct xdp_md *ctx) {
 
         if ((void *)iph + iph->ihl * 4 > data_end) {
             return XDP_ABORTED;
+        }
+
+        struct ipv4_key *key = {
+            .ip = iph->saddr,
+        };
+
+        struct ip_meta *meta = bpf_map_lookup_percpu_elem(&blk_ip_v4, &key);
+        if (meta) {
+            return XDP_DROP;
         }
     }
 
