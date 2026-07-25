@@ -11,7 +11,7 @@ struct ipv4_key {
 
 struct ipv4_lpm_key {
     __u32 prefixlen; // Prefix length (0-32 for IPv4)
-    __u32 data;      // IP address in network byte order (big-endian)
+    __be32 addr;     // IP address in network byte order (big-endian)
 };
 
 // metadata
