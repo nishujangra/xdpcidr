@@ -1,7 +1,7 @@
 // Developed by: Nishant ndjangra1027@gmail.com -- nishujangra.dev
 
 #include "maps/maps.c"
-#include "maps/struct.h"
+#include <bpf/bpf_endian.h>
 #include <bpf/bpf_helpers.h>
 #include <linux/bpf.h>
 #include <linux/if_ether.h>
@@ -42,19 +42,18 @@ int xdp_cidr(struct xdp_md *ctx) {
             .ip = iph->saddr,
         };
 
-        struct ip_meta *meta = bpf_map_lookup_percpu_elem(&blk_ip_v4, &key);
+        struct ip_meta *meta = bpf_map_lookup_elem(&blk_ip_v4, &key);
         if (meta) {
             return XDP_DROP;
         }
 
         // check for CIDR blocklist map
-        struct ipv4_lpm_key key = {
+        struct ipv4_lpm_key lpm_key = {
             .prefixlen = 32,
             .addr = iph->saddr,
         };
 
-        struct ip_meta *meta_cidr =
-            bpf_map_lookup_percpu_elem(&blk_cidr_v4, &key);
+        struct ip_meta *meta_cidr = bpf_map_lookup_elem(&blk_cidr_v4, &lpm_key);
         if (meta_cidr) {
             return XDP_DROP;
         }

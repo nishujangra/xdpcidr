@@ -3,6 +3,8 @@
 #ifndef STRUCT_H
 #define STRUCT_H
 
+#include <linux/types.h> // for types like, __u32, __be32, __u64
+
 // IPv4 Key
 struct ipv4_key {
     __be32

@@ -11,7 +11,7 @@ struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_HASH);
     __type(key, struct ipv4_key);
     __type(value, struct ip_meta);
-    __unit(max_entries, MAX_BLOCKLIST);
+    __uint(max_entries, MAX_BLOCKLIST);
 } blk_ip_v4 SEC(".maps");
 
 // Blacklist IPv4 CIDR
