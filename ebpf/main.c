@@ -37,12 +37,25 @@ int xdp_cidr(struct xdp_md *ctx) {
             return XDP_ABORTED;
         }
 
-        struct ipv4_key *key = {
+        // check for IP blocklist map
+        struct ipv4_key key = {
             .ip = iph->saddr,
         };
 
         struct ip_meta *meta = bpf_map_lookup_percpu_elem(&blk_ip_v4, &key);
         if (meta) {
+            return XDP_DROP;
+        }
+
+        // check for CIDR blocklist map
+        struct ipv4_lpm_key key = {
+            .prefixlen = 32,
+            .addr = iph->saddr,
+        };
+
+        struct ip_meta *meta_cidr =
+            bpf_map_lookup_percpu_elem(&blk_cidr_v4, &key);
+        if (meta_cidr) {
             return XDP_DROP;
         }
     }
