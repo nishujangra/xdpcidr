@@ -9,6 +9,11 @@ struct ipv4_key {
         ip; // __be32 tells you the value is in network byte order (big-endian)
 };
 
+struct ipv4_lpm_key {
+    __u32 prefixlen; // Prefix length (0-32 for IPv4)
+    __u32 data;      // IP address in network byte order (big-endian)
+};
+
 // metadata
 struct ip_meta {
     __u64 created_at;
