@@ -11,12 +11,13 @@ keywords = ["xdp", "ebpf", "aya", "firewall", "cidr"]
 categories = ["network-programming"]
 
 [dependencies]
-aya = "0.14"
+aya = "0.13"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 ipnet = "2"
 log = "0.4"
 env_logger = "0.11"
+ctrlc = "3.5.2"
 
 [profile.release]
 lto = true
