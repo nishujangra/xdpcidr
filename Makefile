@@ -36,13 +36,11 @@ build-ebpf:
 build:
 	cargo build --release
 
-run-dev:
-	make build-dev
-	./target/debug/rfw
+run-dev: build-dev
+	./target/debug/xdpcidr
 
-run:
-	make build
-	./target/release/rfw
+run: build
+	./target/release/xdpcidr
 
 clean-ebpf:
 	$(MAKE) -C ebpf clean
