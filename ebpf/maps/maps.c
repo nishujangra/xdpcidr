@@ -20,4 +20,5 @@ struct {
     __type(key, struct ipv4_lpm_key);
     __type(value, struct ip_meta);
     __uint(max_entries, MAX_BLOCKLIST);
+    __uint(map_flags, BPF_F_NO_PREALLOC);
 } blk_cidr_v4 SEC(".maps");
