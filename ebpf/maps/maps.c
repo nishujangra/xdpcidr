@@ -8,7 +8,7 @@
 
 // Blacklist IPv4
 struct {
-    __uint(type, BPF_MAP_TYPE_PERCPU_HASH);
+    __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, struct ipv4_key);
     __type(value, struct ip_meta);
     __uint(max_entries, MAX_BLOCKLIST);
