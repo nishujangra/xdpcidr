@@ -16,7 +16,7 @@ int xdp_cidr(struct xdp_md *ctx) {
     // sanity check eth header
     struct ethhdr *eth = data;
     if ((void *)(eth + 1) > data_end) {
-        return XDP_ABORTED;
+        return XDP_DROP;
     }
 
     // Check for IPv4
@@ -25,16 +25,16 @@ int xdp_cidr(struct xdp_md *ctx) {
 
         // bound check
         if ((void *)(iph + 1) > data_end) {
-            return XDP_ABORTED;
+            return XDP_DROP;
         }
 
         // ihl is in 32-bit words, 5 is the minimum (no options)
         if (iph->ihl < 5) {
-            return XDP_ABORTED;
+            return XDP_DROP;
         }
 
         if ((void *)iph + iph->ihl * 4 > data_end) {
-            return XDP_ABORTED;
+            return XDP_DROP;
         }
 
         // check for IP blocklist map
