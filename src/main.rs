@@ -10,7 +10,7 @@ struct CliArgs {
     #[arg(short, long, default_value = "eth0")]
     interface: String,
 
-    #[arg(short, long, default_value = "/tmp/xdpcidr/xdpcidr.o")]
+    #[arg(short, long, default_value = "ebpf/main.o")]
     ebpf_path: String,
 }
 

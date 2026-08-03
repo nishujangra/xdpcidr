@@ -36,10 +36,10 @@ build-ebpf:
 build:
 	cargo build --release
 
-run-dev: build-dev
+run-dev: build-ebpf build-dev
 	./target/debug/xdpcidr
 
-run: build
+run: build-ebpf build
 	./target/release/xdpcidr
 
 clean-ebpf:
