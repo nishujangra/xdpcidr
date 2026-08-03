@@ -16,25 +16,32 @@ int xdp_cidr(struct xdp_md *ctx) {
     // sanity check eth header
     struct ethhdr *eth = data;
     if ((void *)(eth + 1) > data_end) {
-        return XDP_ABORTED;
+        return XDP_DROP;
     }
 
+    __u16 proto = bpf_ntohs(eth->h_proto);
+
     // Check for IPv4
-    if (bpf_ntohs(eth->h_proto) == ETH_P_IP) {
+    if (proto == ETH_P_IP) {
         struct iphdr *iph = (void *)(eth + 1);
 
         // bound check
         if ((void *)(iph + 1) > data_end) {
-            return XDP_ABORTED;
+            return XDP_DROP;
         }
 
-        // ihl is in 32-bit words, 5 is the minimum (no options)
+        // ihl is in 32-bit words, 5 is the minimum (no options).
+        // A smaller value means a malformed header, so reject it.
         if (iph->ihl < 5) {
-            return XDP_ABORTED;
+            return XDP_DROP;
         }
 
+        // Only saddr is read below, and (iph + 1) above already covers the
+        // fixed 20-byte header. This validates the full options-inclusive
+        // header so that L4 parsing can be added here without a silent
+        // out-of-bounds read.
         if ((void *)iph + iph->ihl * 4 > data_end) {
-            return XDP_ABORTED;
+            return XDP_DROP;
         }
 
         // check for IP blocklist map
@@ -60,7 +67,7 @@ int xdp_cidr(struct xdp_md *ctx) {
     }
 
     // Drop IPv6
-    else if (bpf_ntohs(eth->h_proto) == ETH_P_IPV6) {
+    else if (proto == ETH_P_IPV6) {
         return XDP_DROP;
     }
 

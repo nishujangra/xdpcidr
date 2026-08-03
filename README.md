@@ -57,16 +57,15 @@ The program stays attached until you press Ctrl+C, which detaches it.
 | Flag | Short | Default | Description |
 | --- | --- | --- | --- |
 | `--interface` | `-i` | `eth0` | Network interface to attach the XDP program to |
-| `--ebpf-path` | `-e` | `/tmp/xdpcidr/xdpcidr.o` | Path to the compiled XDP object file |
+| `--ebpf-path` | `-e` | `ebpf/main.o` | Path to the compiled XDP object file |
 | `--help` | `-h` | | Print help |
 
-Both defaults usually need overriding:
+`--interface` usually needs overriding: `eth0` won't exist on most modern systems,
+which use predictable names. List yours with `ip -brief link show` and pass the one
+you want (e.g. `wlp0s20f3`, `enp3s0`).
 
-- `--interface`: `eth0` won't exist on most modern systems, which use predictable
-  names. List yours with `ip -brief link show` and pass the one you want (e.g.
-  `wlp0s20f3`, `enp3s0`).
-- `--ebpf-path`: the build writes `ebpf/main.o`, not `/tmp/xdpcidr/xdpcidr.o`.
-  Nothing copies it there, so pass `--ebpf-path ebpf/main.o`.
+`--ebpf-path` defaults to what the build produces, so it only needs overriding if
+you run the binary from outside the repository root.
 
 ### A note on `sudo cargo run`
 
