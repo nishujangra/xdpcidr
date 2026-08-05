@@ -4,8 +4,8 @@ use aya::Pod;
 use aya::maps::Map;
 use aya::maps::{HashMap, LpmTrie, MapData};
 
-pub const BLOCKLIST_IP_V4: &str = "/sys/fs/bpf/rfw/blk_ip_v4";
-pub const BLOCKLIST_IP_V4_SUBNET: &str = "/sys/fs/bpf/rfw/blk_cidr_v4";
+pub const BLOCKLIST_IP_V4: &str = "/sys/fs/bpf/xdpcidr/blk_ip_v4";
+pub const BLOCKLIST_IP_V4_SUBNET: &str = "/sys/fs/bpf/xdpcidr/blk_cidr_v4";
 
 // Opens a pinned map, wrapping it in the aya type matching how it was declared
 // in ebpf/maps/maps.c: blk_ip_v4 is a HASH, blk_cidr_v4 is an LPM_TRIE.

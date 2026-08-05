@@ -5,8 +5,6 @@ use std::net::Ipv4Addr;
 use aya::maps::lpm_trie::Key;
 use ipnet::Ipv4Net;
 
-use rfw_core::types::RuleEntry;
-
 use crate::ebpf::opnmap::{BLOCKLIST_IP_V4, BLOCKLIST_IP_V4_SUBNET, opn_xpdcidr_ebpf_map};
 
 // add IPv4 to blocklist map

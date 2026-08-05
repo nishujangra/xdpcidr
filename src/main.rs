@@ -44,7 +44,7 @@ fn main() -> Result<(), anyhow::Error> {
         println!("Pinned Map {} -> {}", name, path);
     }
 
-    println!("rfw-ebpf program attached. Press Ctrl+C to stop.");
+    println!("xdpcidr-ebpf program attached. Press Ctrl+C to stop.");
 
     let (tx, rx) = std::sync::mpsc::channel();
     ctrlc::set_handler(move || {
