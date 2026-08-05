@@ -61,6 +61,26 @@ pub fn list_blocklist_v4() -> Vec<RuleEntry> {
         .collect()
 }
 
+// List IPv4 subnet entries
+pub fn list_blocklist_v4_subnet() -> Vec<RuleEntry> {
+    let Ok(map) = opn_xpdcidr_ebpf_map::<Key<u32>, IPMeta>(BLOCKLIST_IP_V4_SUBNET) else {
+        return Vec::new();
+    };
+
+    map.iter()
+        .filter_map(|r| r.ok())
+        .map(|(k, v): (Key<u32>, IPMeta)| RuleEntry {
+            ip: format!(
+                "{}/{}",
+                Ipv4Addr::from(u32::from_be(k.data())),
+                k.prefix_len()
+            ),
+            reason: v.reason,
+            created_at: v.created_at,
+        })
+        .collect()
+}
+
 // Delete from map
 pub fn remove_blocklist_v4(ip: Ipv4Addr) -> anyhow::Result<()> {
     let mut map = opn_xpdcidr_ebpf_map::<IPv4Key, IPMeta>(BLOCKLIST_IP_V4)?;
