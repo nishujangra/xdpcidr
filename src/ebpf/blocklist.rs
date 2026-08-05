@@ -96,3 +96,23 @@ pub fn remove_blocklist_v4(ip: Ipv4Addr) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+// Delete subnet from CIDR map
+pub fn remove_blocklist_v4_subnet(net: Ipv4Net) -> anyhow::Result<()> {
+    let mut map = opn_xpdcidr_ebpf_map::<Key<u32>, IPMeta>(BLOCKLIST_IP_V4_SUBNET)?;
+
+    // must match how block_ipv4_subnet built the key, host bits masked off
+    let key = Key::new(
+        net.prefix_len() as u32,
+        u32::from(net.network()).to_be(),
+    );
+
+    match map.remove(&key) {
+        Ok(_) => {}
+        Err(e) => {
+            return Err(anyhow::anyhow!("failed to remove {}: {}", net, e));
+        }
+    }
+
+    Ok(())
+}
