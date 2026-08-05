@@ -4,6 +4,8 @@ use aya::programs::XdpFlags;
 use aya::{Ebpf, programs::Xdp};
 use clap::Parser;
 
+pub mod ebpf;
+
 #[derive(Debug, Parser)]
 #[command(about = "xdpcidr - eBPF based blocklist")]
 struct CliArgs {
@@ -30,10 +32,24 @@ fn main() -> Result<(), anyhow::Error> {
     program.load()?;
     program.attach(&args.interface, XdpFlags::default())?;
 
-    println!("rfw-ebpf program attached. Press Ctrl+C to stop.");
+    //pin maps
+    for (name, map) in ebpf.maps_mut() {
+        let path = format!("/sys/fs/bpf/xdpcidr/{name}");
+
+        // remove old pin if exist
+        let _ = std::fs::remove_file(&path);
+
+        map.pin(&path)?;
+
+        println!("Pinned Map {} -> {}", name, path);
+    }
+
+    println!("xdpcidr-ebpf program attached. Press Ctrl+C to stop.");
 
     let (tx, rx) = std::sync::mpsc::channel();
-    ctrlc::set_handler(move || { let _ = tx.send(()); })?;
+    ctrlc::set_handler(move || {
+        let _ = tx.send(());
+    })?;
     rx.recv()?;
 
     println!("\n\nDetaching...");
