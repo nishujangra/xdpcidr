@@ -1,8 +1,6 @@
 // --- Developed By: Nishant ndjangra1027@gmail.com -- nishujangra.dev
 
-use aya::Pod;
-use aya::maps::Map;
-use aya::maps::{HashMap, LpmTrie, MapData};
+use aya::maps::{Map, MapData};
 
 pub const BLOCKLIST_IP_V4: &str = "/sys/fs/bpf/xdpcidr/blk_ip_v4";
 pub const BLOCKLIST_IP_V4_SUBNET: &str = "/sys/fs/bpf/xdpcidr/blk_cidr_v4";

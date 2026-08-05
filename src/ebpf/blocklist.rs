@@ -5,17 +5,22 @@ use std::net::Ipv4Addr;
 use aya::maps::lpm_trie::Key;
 use ipnet::Ipv4Net;
 
-use crate::ebpf::opnmap::{BLOCKLIST_IP_V4, BLOCKLIST_IP_V4_SUBNET, opn_xpdcidr_ebpf_map};
+use aya::maps::{HashMap, LpmTrie, MapData};
+
+use crate::ebpf::{
+    opnmap::{BLOCKLIST_IP_V4, BLOCKLIST_IP_V4_SUBNET, opn_xpdcidr_ebpf_map},
+    types::{IPMeta, IPv4Key, RuleEntry},
+};
 
 // add IPv4 to blocklist map
 pub fn block_ipv4(ip: Ipv4Addr) -> anyhow::Result<()> {
-    let mut map = opn_xpdcidr_ebpf_map(BLOCKLIST_IP_V4)?;
+    let mut map: HashMap<MapData, IPv4Key, IPMeta> =
+        HashMap::try_from(opn_xpdcidr_ebpf_map(BLOCKLIST_IP_V4)?)?;
 
     let key = IPv4Key::from_ip(ip);
 
     let value = IPMeta {
         created_at: 0,
-        reason: reason::MANUAL_BLOCK,
     };
 
     map.insert(key, value, 0)?;
@@ -25,7 +30,8 @@ pub fn block_ipv4(ip: Ipv4Addr) -> anyhow::Result<()> {
 
 // add IPv4 subnet to CIDR blocklist map
 pub fn block_ipv4_subnet(net: Ipv4Net) -> anyhow::Result<()> {
-    let mut map = opn_xpdcidr_ebpf_map(BLOCKLIST_IP_V4_SUBNET)?;
+    let mut map: LpmTrie<MapData, u32, IPMeta> =
+        LpmTrie::try_from(opn_xpdcidr_ebpf_map(BLOCKLIST_IP_V4_SUBNET)?)?;
 
     // network() masks off host bits, so 10.0.0.5/24 is stored as 10.0.0.0/24
     let key = Key::new(
@@ -35,7 +41,6 @@ pub fn block_ipv4_subnet(net: Ipv4Net) -> anyhow::Result<()> {
 
     let value = IPMeta {
         created_at: 0,
-        reason: reason::MANUAL_BLOCK,
     };
 
     map.insert(&key, value, 0)?;
@@ -45,7 +50,11 @@ pub fn block_ipv4_subnet(net: Ipv4Net) -> anyhow::Result<()> {
 
 // List IPv4 entries
 pub fn list_blocklist_v4() -> Vec<RuleEntry> {
-    let Ok(map) = opn_xpdcidr_ebpf_map::<IPv4Key, IPMeta>(BLOCKLIST_IP_V4) else {
+    let Ok(map) = opn_xpdcidr_ebpf_map(BLOCKLIST_IP_V4) else {
+        return Vec::new();
+    };
+
+    let Ok(map) = HashMap::<MapData, IPv4Key, IPMeta>::try_from(map) else {
         return Vec::new();
     };
 
@@ -53,7 +62,6 @@ pub fn list_blocklist_v4() -> Vec<RuleEntry> {
         .filter_map(|r| r.ok())
         .map(|(k, v): (IPv4Key, IPMeta)| RuleEntry {
             ip: Ipv4Addr::from(u32::from_be(k.ip)).to_string(),
-            reason: v.reason,
             created_at: v.created_at,
         })
         .collect()
@@ -61,7 +69,11 @@ pub fn list_blocklist_v4() -> Vec<RuleEntry> {
 
 // List IPv4 subnet entries
 pub fn list_blocklist_v4_subnet() -> Vec<RuleEntry> {
-    let Ok(map) = opn_xpdcidr_ebpf_map::<Key<u32>, IPMeta>(BLOCKLIST_IP_V4_SUBNET) else {
+    let Ok(map) = opn_xpdcidr_ebpf_map(BLOCKLIST_IP_V4_SUBNET) else {
+        return Vec::new();
+    };
+
+    let Ok(map) = LpmTrie::<MapData, u32, IPMeta>::try_from(map) else {
         return Vec::new();
     };
 
@@ -73,7 +85,6 @@ pub fn list_blocklist_v4_subnet() -> Vec<RuleEntry> {
                 Ipv4Addr::from(u32::from_be(k.data())),
                 k.prefix_len()
             ),
-            reason: v.reason,
             created_at: v.created_at,
         })
         .collect()
@@ -81,7 +92,8 @@ pub fn list_blocklist_v4_subnet() -> Vec<RuleEntry> {
 
 // Delete from map
 pub fn remove_blocklist_v4(ip: Ipv4Addr) -> anyhow::Result<()> {
-    let mut map = opn_xpdcidr_ebpf_map::<IPv4Key, IPMeta>(BLOCKLIST_IP_V4)?;
+    let mut map: HashMap<MapData, IPv4Key, IPMeta> =
+        HashMap::try_from(opn_xpdcidr_ebpf_map(BLOCKLIST_IP_V4)?)?;
 
     let key = IPv4Key::from_ip(ip);
 
@@ -97,7 +109,8 @@ pub fn remove_blocklist_v4(ip: Ipv4Addr) -> anyhow::Result<()> {
 
 // Delete subnet from CIDR map
 pub fn remove_blocklist_v4_subnet(net: Ipv4Net) -> anyhow::Result<()> {
-    let mut map = opn_xpdcidr_ebpf_map::<Key<u32>, IPMeta>(BLOCKLIST_IP_V4_SUBNET)?;
+    let mut map: LpmTrie<MapData, u32, IPMeta> =
+        LpmTrie::try_from(opn_xpdcidr_ebpf_map(BLOCKLIST_IP_V4_SUBNET)?)?;
 
     // must match how block_ipv4_subnet built the key, host bits masked off
     let key = Key::new(
