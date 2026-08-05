@@ -2,3 +2,4 @@
 
 pub mod types;
 pub mod opnmap;
+pub mod blocklist_ip;
