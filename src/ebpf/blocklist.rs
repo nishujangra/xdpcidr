@@ -22,7 +22,6 @@ pub fn block_ipv4(ip: Ipv4Addr) -> anyhow::Result<()> {
     Ok(())
 }
 
-
 // List IPv4 entries
 pub fn list_blocklist_v4() -> Vec<RuleEntry> {
     let Ok(map) = opn_xpdcidr_ebpf_map::<IPv4Key, IPMeta>(BLOCKLIST_IP_V4) else {
@@ -38,8 +37,6 @@ pub fn list_blocklist_v4() -> Vec<RuleEntry> {
         })
         .collect()
 }
-
-
 
 // Delete from map
 pub fn remove_blocklist_v4(ip: Ipv4Addr) -> anyhow::Result<()> {
