@@ -2,16 +2,18 @@
 
 use aya::Pod;
 use aya::maps::Map;
-use aya::maps::{HashMap, MapData};
+use aya::maps::{HashMap, LpmTrie, MapData};
 
 pub const BLOCKLIST_IP_V4: &str = "/sys/fs/bpf/rfw/blk_ip_v4";
 pub const BLOCKLIST_IP_V4_SUBNET: &str = "/sys/fs/bpf/rfw/blk_cidr_v4";
 
-pub fn opn_xpdcidr_ebpf_map<K, V>(path: &str) -> anyhow::Result<HashMap<MapData, K, V>>
-where
-    K: Pod,
-    V: Pod,
-{
+// Opens a pinned map, wrapping it in the aya type matching how it was declared
+// in ebpf/maps/maps.c: blk_ip_v4 is a HASH, blk_cidr_v4 is an LPM_TRIE.
+pub fn opn_xpdcidr_ebpf_map(path: &str) -> anyhow::Result<Map> {
     let map = MapData::from_pin(path)?;
-    Ok(HashMap::try_from(Map::HashMap(map))?)
+
+    Ok(match path {
+        BLOCKLIST_IP_V4_SUBNET => Map::LpmTrie(map),
+        _ => Map::HashMap(map),
+    })
 }
