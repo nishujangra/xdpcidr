@@ -38,3 +38,21 @@ pub fn list_blocklist_v4() -> Vec<RuleEntry> {
         })
         .collect()
 }
+
+
+
+// Delete from map
+pub fn remove_blocklist_v4(ip: Ipv4Addr) -> anyhow::Result<()> {
+    let mut map = opn_xpdcidr_ebpf_map::<IPv4Key, IPMeta>(BLOCKLIST_IP_V4)?;
+
+    let key = IPv4Key::from_ip(ip);
+
+    match map.remove(&key) {
+        Ok(_) => {}
+        Err(e) => {
+            return Err(anyhow::anyhow!("failed to remove {}: {}", ip, e));
+        }
+    }
+
+    Ok(())
+}
