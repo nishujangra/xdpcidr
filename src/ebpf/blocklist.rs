@@ -21,3 +21,20 @@ pub fn block_ipv4(ip: Ipv4Addr) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+
+// List IPv4 entries
+pub fn list_blocklist_v4() -> Vec<RuleEntry> {
+    let Ok(map) = opn_xpdcidr_ebpf_map::<IPv4Key, IPMeta>(BLOCKLIST_IP_V4) else {
+        return Vec::new();
+    };
+
+    map.iter()
+        .filter_map(|r| r.ok())
+        .map(|(k, v): (IPv4Key, IPMeta)| RuleEntry {
+            ip: Ipv4Addr::from(u32::from_be(k.ip)).to_string(),
+            reason: v.reason,
+            created_at: v.created_at,
+        })
+        .collect()
+}
