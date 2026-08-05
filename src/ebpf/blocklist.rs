@@ -2,9 +2,12 @@
 
 use std::net::Ipv4Addr;
 
+use aya::maps::lpm_trie::Key;
+use ipnet::Ipv4Net;
+
 use rfw_core::types::RuleEntry;
 
-use crate::ebpf::opnmap::{BLOCKLIST_IP_V4, opn_xpdcidr_ebpf_map};
+use crate::ebpf::opnmap::{BLOCKLIST_IP_V4, BLOCKLIST_IP_V4_SUBNET, opn_xpdcidr_ebpf_map};
 
 // add IPv4 to blocklist map
 pub fn block_ipv4(ip: Ipv4Addr) -> anyhow::Result<()> {
@@ -18,6 +21,26 @@ pub fn block_ipv4(ip: Ipv4Addr) -> anyhow::Result<()> {
     };
 
     map.insert(key, value, 0)?;
+
+    Ok(())
+}
+
+// add IPv4 subnet to CIDR blocklist map
+pub fn block_ipv4_subnet(net: Ipv4Net) -> anyhow::Result<()> {
+    let mut map = opn_xpdcidr_ebpf_map(BLOCKLIST_IP_V4_SUBNET)?;
+
+    // network() masks off host bits, so 10.0.0.5/24 is stored as 10.0.0.0/24
+    let key = Key::new(
+        net.prefix_len() as u32,
+        u32::from(net.network()).to_be(),
+    );
+
+    let value = IPMeta {
+        created_at: 0,
+        reason: reason::MANUAL_BLOCK,
+    };
+
+    map.insert(&key, value, 0)?;
 
     Ok(())
 }
