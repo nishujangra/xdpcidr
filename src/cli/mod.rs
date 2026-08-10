@@ -28,3 +28,44 @@ pub enum Command {
     // List blocked addresses and CIDR ranges
     List,
 }
+
+// Target is either IPv4 or IPv4 subnet. V6 parses successfully but has no map
+// to go in, so it is carried as its own variant and rejected by each command
+// with a clear message rather than a syntax error.
+#[derive(Debug, Clone)]
+pub enum Target {
+    Addr(Ipv4Addr),
+    Net(Ipv4Net),
+    V6(String),
+}
+
+impl std::fmt::Display for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Addr(ip) => write!(f, "{}", ip),
+            Self::Net(net) => write!(f, "{}", net),
+            Self::V6(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+impl std::str::FromStr for Target {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // A prefix means a range, so parse the two forms with the matching
+        // type; both narrow to v4 or fall through to the V6 variant.
+        if s.contains('/') {
+            match s.parse::<IpNet>()? {
+                IpNet::V4(net) => Ok(Self::Net(net)),
+                IpNet::V6(_) => Ok(Self::V6(s.to_string())),
+            }
+        } else {
+            match s.parse::<IpAddr>()? {
+                IpAddr::V4(ip) => Ok(Self::Addr(ip)),
+                IpAddr::V6(_) => Ok(Self::V6(s.to_string())),
+            }
+        }
+    }
+}
+
