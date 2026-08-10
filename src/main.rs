@@ -4,25 +4,45 @@ use aya::programs::XdpFlags;
 use aya::{Ebpf, programs::Xdp};
 use clap::Parser;
 
+pub mod cli;
 pub mod ebpf;
 
+use crate::cli::Command;
+
 #[derive(Debug, Parser)]
+#[command(name = "xdpcidr")]
 #[command(about = "xdpcidr - eBPF based blocklist")]
 struct CliArgs {
-    #[arg(short, long, default_value = "eth0")]
-    interface: String,
-
-    #[arg(short, long, default_value = "ebpf/main.o")]
-    ebpf_path: String,
+    #[command(subcommand)]
+    command: Option<Command>,
 }
 
-//#[tokio::main]
 fn main() -> Result<(), anyhow::Error> {
-    println!("Ohh yeah!!!!!!!!!!!!!");
-
     let args = CliArgs::parse();
 
-    let mut ebpf = Ebpf::load_file(&args.ebpf_path)?;
+    match args.command {
+        Some(Command::Run {
+            interface,
+            ebpf_path,
+        }) => attach(&interface, &ebpf_path)?,
+
+        Some(Command::Add { target }) => cli::add::run(target),
+
+        Some(Command::Remove { target }) => cli::remove::run(target),
+
+        Some(Command::List) => cli::list::run(),
+
+        None => eprintln!("No subcommand given. Use --help."),
+    }
+
+    Ok(())
+}
+
+// Loads the XDP object, attaches it to the interface and pins its maps, then
+// blocks until Ctrl+C. The pins are what let `add`/`remove`/`list` reach the
+// maps from a separate invocation.
+fn attach(interface: &str, ebpf_path: &str) -> Result<(), anyhow::Error> {
+    let mut ebpf = Ebpf::load_file(ebpf_path)?;
 
     let program: &mut Xdp = ebpf
         .program_mut("xdp_cidr")
@@ -30,7 +50,7 @@ fn main() -> Result<(), anyhow::Error> {
         .try_into()?;
 
     program.load()?;
-    program.attach(&args.interface, XdpFlags::default())?;
+    program.attach(interface, XdpFlags::default())?;
 
     //pin maps
     for (name, map) in ebpf.maps_mut() {

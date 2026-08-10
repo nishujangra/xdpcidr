@@ -1,89 +1,78 @@
- # xdpcidr
+# xdpcidr
 
-An XDP program that drops packets from blocked IPv4 addresses and CIDR ranges at the earliest point in the network stack.
+An XDP program that drops packets from blocked IPv4 addresses and CIDR ranges at
+the earliest point in the network stack.
 
 ## How it works
 
-The XDP program (`ebpf/main.c`) inspects each incoming packet:
+The XDP program (`ebpf/main.c`) checks each packet's IPv4 source address against
+two maps: a hash map (`blk_ip_v4`) for exact matches and an LPM trie
+(`blk_cidr_v4`) for CIDR ranges. A hit returns `XDP_DROP`. IPv6 is dropped
+wholesale; everything else passes.
 
-- IPv4 source addresses are checked against a per-CPU hash map (`blk_ip_v4`) for exact-match blocks.
-- IPv4 source addresses are checked against an LPM trie (`blk_cidr_v4`) for CIDR-range blocks.
-- Matching packets return `XDP_DROP`.
-- IPv6 packets are dropped.
-- All other packets return `XDP_PASS`.
-
-Both maps hold up to 1000 entries and store an `ip_meta` value (creation timestamp).
-
-## Layout
-
-```
-ebpf/
-  main.c          XDP program
-  maps/
-    maps.c        map definitions
-    struct.h      key and value structs
-src/
-  main.rs         userspace loader
-```
+The maps are pinned under `/sys/fs/bpf/xdpcidr/`, which is how `add`, `remove`
+and `list` reach them from a separate invocation.
 
 ## Build
 
-Build the XDP object and the userspace loader:
-
 ```sh
-make build-ebpf     # compiles ebpf/main.c -> ebpf/main.o
+make build-ebpf     # ebpf/main.c -> ebpf/main.o
 make build-dev      # cargo build (debug)
-```
-
-Or for a release build:
-
-```sh
 make build          # cargo build --release
 ```
 
 ## Usage
 
-Loading and attaching an XDP program requires `CAP_BPF` and `CAP_NET_ADMIN`, so run
-it as root:
+Everything needs root (`CAP_BPF` and `CAP_NET_ADMIN`).
+
+Attach the program — this stays in the foreground until Ctrl+C:
 
 ```sh
-sudo ./target/debug/xdpcidr --interface wlp0s20f3 --ebpf-path ebpf/main.o
+sudo mkdir -p /sys/fs/bpf/xdpcidr
+sudo ./target/debug/xdpcidr run -i wlp0s20f3
 ```
 
-The program stays attached until you press Ctrl+C, which detaches it.
+Then manage rules from another shell:
 
-### Flags
+```sh
+sudo ./target/debug/xdpcidr add 1.2.3.4
+sudo ./target/debug/xdpcidr add 10.0.0.0/24
+sudo ./target/debug/xdpcidr list
+sudo ./target/debug/xdpcidr remove 10.0.0.0/24
+```
 
-| Flag | Short | Default | Description |
-| --- | --- | --- | --- |
-| `--interface` | `-i` | `eth0` | Network interface to attach the XDP program to |
-| `--ebpf-path` | `-e` | `ebpf/main.o` | Path to the compiled XDP object file |
-| `--help` | `-h` | | Print help |
+### Commands
 
-`--interface` usually needs overriding: `eth0` won't exist on most modern systems,
-which use predictable names. List yours with `ip -brief link show` and pass the one
-you want (e.g. `wlp0s20f3`, `enp3s0`).
+| Command | Description |
+| --- | --- |
+| `run` | Attach the program and pin its maps; `-i` interface (default `eth0`), `-e` object path (default `ebpf/main.o`) |
+| `add <target>` | Block an address (`1.2.3.4`) or range (`10.0.0.0/24`) |
+| `remove <target>` | Remove an address or range |
+| `list` | Print blocked addresses and ranges |
 
-`--ebpf-path` defaults to what the build produces, so it only needs overriding if
-you run the binary from outside the repository root.
+`-i` usually needs overriding — `eth0` won't exist on most modern systems. List
+yours with `ip -brief link show`.
 
-### A note on `sudo cargo run`
+Rules live in the pinned maps only while `run` is active; the pins are recreated
+on each `run`.
 
-`sudo cargo run` works, but builds as root and leaves root-owned files in `target/`,
-after which unprivileged `cargo build` fails with `Permission denied`. Prefer
-building unprivileged and running the binary under `sudo`, as above. If you've
-already hit this:
+## Notes
+
+Attaching to your main interface drops all IPv6 traffic. Use `-i lo` to try it
+out safely.
+
+Avoid `sudo cargo run` — it builds as root and leaves root-owned files in
+`target/`, breaking later unprivileged builds. Recover with:
 
 ```sh
 sudo chown -R "$USER:$USER" target/
 ```
 
-### Verifying it loaded
+Verify it loaded:
 
 ```sh
-sudo bpftool prog show          # look for an xdp-type prog named xdp_cidr
+sudo bpftool prog show          # an xdp-type prog named xdp_cidr
 sudo bpftool map show           # blk_ip_v4 and blk_cidr_v4
-sudo bpftool net
 ip link show dev <interface>    # shows an xdp/prog id when attached
 ```
 
