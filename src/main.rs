@@ -5,6 +5,7 @@ use aya::{Ebpf, programs::Xdp};
 use clap::Parser;
 
 pub mod ebpf;
+pub mod cli;
 
 #[derive(Debug, Parser)]
 #[command(about = "xdpcidr - eBPF based blocklist")]
