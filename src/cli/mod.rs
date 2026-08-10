@@ -1,6 +1,12 @@
+// --- Developed By: Nishant ndjangra1027@gmail.com -- nishujangra.dev
+
 use std::net::{IpAddr, Ipv4Addr};
 use clap::Subcommand;
 use ipnet::{IpNet, Ipv4Net};
+
+pub mod add;
+pub mod list;
+pub mod remove;
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
@@ -29,9 +35,7 @@ pub enum Command {
     List,
 }
 
-// Target is either IPv4 or IPv4 subnet. V6 parses successfully but has no map
-// to go in, so it is carried as its own variant and rejected by each command
-// with a clear message rather than a syntax error.
+// Target is either IPv4 or IPv4 subnet. V6 parses but will get error
 #[derive(Debug, Clone)]
 pub enum Target {
     Addr(Ipv4Addr),
@@ -53,8 +57,7 @@ impl std::str::FromStr for Target {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // A prefix means a range, so parse the two forms with the matching
-        // type; both narrow to v4 or fall through to the V6 variant.
+        // Prefix = range, so parse the two forms with matching type; both for v4
         if s.contains('/') {
             match s.parse::<IpNet>()? {
                 IpNet::V4(net) => Ok(Self::Net(net)),
@@ -68,4 +71,3 @@ impl std::str::FromStr for Target {
         }
     }
 }
-
